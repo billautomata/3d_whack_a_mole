@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>halloween</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				background-color: #000000;
+				margin: 0px;
+				overflow: hidden;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+				font-weight: bold;
+				text-align:center;
+			}
+		</style>
+	</head>
+	<body>
+
+		<script src="libs/Detector.js"></script>
+		<script src="libs/three.js"></script>
+		<script src="libs/tween.min.js"></script>
+
+		<script src="game_js/mole.js"></script>
+
+		<script>
+
+			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+			var container, stats;
+			var camera, scene, renderer, camera2
+			var mouseX = 0, mouseY = 0;
+
+			var raycaster
+			var mouse
+			var m
+
+			var moles = []
+
+			var mesh
+
+			var camerafov = {
+				current: 75,
+				target: 10,
+				max: 100,
+				derp:true,
+				position_x: 0,
+				position_y: 0,
+				position_z: 0
+			 	}
+			var tween = new TWEEN.Tween(camerafov).to({ current: camerafov.target }, 20000)
+			var tweenback = new TWEEN.Tween(camerafov).to({ current: camerafov.max }, 2000)
+
+			tween.chain(tweenback)
+			tweenback.chain(tween)
+
+
+			var windowHalfX = window.innerWidth / 2;
+			var windowHalfY = window.innerHeight / 2;
+
+			init();
+			animate();
+
+			function init() {
+
+				// setup the camera and the scene
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 2000 );
+				// camera2 = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 2000 );
+				camera.position.z = 500;
+				camera.position.x = 000;
+				camera.position.y = 000;
+
+				scene = new THREE.Scene();
+				scene.fog = new THREE.FogExp2( 0x000000, 0.0008 );
+
+				// geometry = new THREE.Geometry();
+
+				renderer = new THREE.WebGLRenderer( { clearAlpha: 1, antialias: true  } );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+				renderer.setClearColorHex( 0x666666, 1 );
+
+				renderer.shadowMapEnabled = false;
+				renderer.shadowMapSoft = false;
+
+				renderer.shadowMapCascade = true
+
+				renderer.shadowCameraNear = 3;
+				renderer.shadowCameraFar = camera.far;
+				renderer.shadowCameraFov = camera.fov;
+
+				renderer.shadowMapBias = 0.00013;
+				renderer.shadowMapDarkness = 1.0;
+				renderer.shadowMapWidth = 2048;
+				renderer.shadowMapHeight = 2048;
+
+				// done setting up the scene
+
+				var mat = new THREE.MeshPhongMaterial({
+					color: new THREE.Color(1,0,1)
+				})
+
+				var floor = new THREE.PlaneBufferGeometry(1000,1000)
+
+				mesh = new THREE.Mesh(floor,mat)
+
+				// mesh.geometry.rotation.x = Math.PI*0.1
+
+				// scene.add(mesh)
+
+				mesh.rotation.x = Math.PI*0.5 * -1
+
+				var box = new THREE.Mesh(new THREE.CubeGeometry(100,100,100), new THREE.MeshPhongMaterial({color:'green'}))
+				// scene.add(box)
+
+
+				create_moles(4)
+
+				// for(var i = 0; i < 20; i++){
+				// 	q = new Mole()
+				// 	q.base.position.z = i * -20
+				// 	scene.add(q.base)
+				// }
+
+				var l = new THREE.SpotLight(0xffffff,1.0)
+				l.position.set(200,300,600)
+				l.shadowMapWidth = 2048;
+				l.shadowMapHeight = 2048;
+				l.shadowCameraNear = 5;
+				l.shadowCameraFar = 1000;
+				l.shadowCameraFov = 90;
+				l.lookAt(0,0,0)
+				l.castShadow = true
+				scene.add(l)
+
+				secondlight = new THREE.SpotLight(0xffffff,10.33)
+				secondlight.position.set(0,1000,-500)
+				secondlight.shadowMapWidth = 2048;
+				secondlight.shadowMapHeight = 2048;
+				secondlight.shadowCameraNear = 5;
+				secondlight.shadowCameraFar = 1000;
+				secondlight.shadowCameraFov = 90;
+				secondlight.lookAt(0,0,0)
+				secondlight.castShadow = true
+				scene.add(secondlight)
+
+				// scene.add(new THREE.AmbientLight(0x333333))
+
+
+				raycaster = new THREE.Raycaster()
+				mouse = new THREE.Vector2()
+
+				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+				document.addEventListener( 'touchstart', onDocumentTouchStart, false );
+				document.addEventListener( 'touchmove', onDocumentTouchMove, false );
+
+				//
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+			}
+
+			//
+			function create_moles(n){
+
+				for(var i = 0; i < n; i++){
+						// add a mole
+						m = new Mole()
+						m.base.position.z = -200
+						scene.add(m.base)
+
+						moles.push(m)
+				}
+
+
+			}
+
+			function animate(_t) {
+
+				requestAnimationFrame( animate );
+
+				tick()
+
+				TWEEN.update()
+
+				renderer.render( scene, camera );
+
+
+			}
+
+			function tick() {
+
+				var time = Date.now() * 0.00005;
+				//
+				camera.position.x += ( mouseX - camera.position.x ) * 0.05;
+				camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
+
+
+				// console.log(camerafov.current)
+				// camera.fov = camerafov.current
+				// camera.position.x = camerafov.position_x
+				// camera.position.y = camerafov.position_y
+				// camera.position.z = camerafov.position_z
+
+				camera.updateProjectionMatrix()
+
+				// camera2.position.x = 300
+				// camera2.position.y = 300
+				// camera2.position.z = 1000
+				// camera2.lookAt(scene.position)
+
+				secondlight.lookAt(0,0,0)
+
+				var all_dead = true
+				moles.forEach(function(mole){
+					if(!mole.done){
+						mole.tick(time)
+						all_dead = false
+					}
+				})
+
+				// console.log(all_dead)
+
+				if(all_dead){
+
+					console.log('all dead removing from scene adding another')
+
+					moles.forEach(function(mole){
+						scene.remove(mole.base)
+					})
+
+					moles = []
+
+					create_moles(Math.floor(Math.random()*5)+1)
+
+
+				}
+
+
+
+				// m.tick(time)
+				//m.mesh2.lookAt(camera.position)
+				// m.mesh2.rotation.z = Math.PI*0.3
+
+				camera.lookAt(scene.position)
+
+			}
+
+
+
+			function onWindowResize() {
+
+				windowHalfX = window.innerWidth / 2;
+				windowHalfY = window.innerHeight / 2;
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+
+				camera2.aspect = window.innerWidth / window.innerHeight;
+				camera2.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+
+			document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+
+			var projector = new THREE.Projector();
+
+			function onDocumentMouseDown( event ) {
+
+			    event.preventDefault();
+
+					var vector = new THREE.Vector3( mouse.x, mouse.y, 1 ).unproject( camera );
+					// var vector = new THREE.Vector3( mouseX, mouseY, 1 ).unproject( camera );
+
+
+					raycaster.set( camera.position, vector.sub( camera.position ).normalize() );
+
+					var intersects = raycaster.intersectObjects( scene.children, true );
+
+					if ( intersects.length === 1 ) {
+
+						console.log(intersects)
+
+						intersects.forEach(function(element){
+							console.log(element.object.name)
+							if(element.object.name === 'enemy'){
+								element.object.picked = true
+								element.object.material.color = new THREE.Color(Math.random(),Math.random(),Math.random())
+							}
+
+						})
+
+						// if ( INTERSECTED != intersects[ 0 ].object ) {
+						//
+						// 	if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
+						//
+						// 	INTERSECTED = intersects[ 0 ].object;
+						// 	INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
+						// 	INTERSECTED.material.emissive.setHex( 0xff0000 );
+						//
+						// }
+
+					} else {
+
+						console.log('none')
+
+						//
+						// if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
+						//
+						// INTERSECTED = null;
+
+					}
+
+			}
+
+			function onDocumentMouseMove( event ) {
+
+				mouseX = event.clientX - windowHalfX;
+				mouseY = event.clientY - windowHalfY;
+
+				mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+				mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+			}
+
+			function onDocumentTouchStart( event ) {
+
+				if ( event.touches.length === 1 ) {
+
+					event.preventDefault();
+
+					mouseX = event.touches[ 0 ].pageX - windowHalfX;
+					mouseY = event.touches[ 0 ].pageY - windowHalfY;
+
+				}
+
+			}
+
+			function onDocumentTouchMove( event ) {
+
+				if ( event.touches.length === 1 ) {
+
+					event.preventDefault();
+
+					mouseX = event.touches[ 0 ].pageX - windowHalfX;
+					mouseY = event.touches[ 0 ].pageY - windowHalfY;
+
+				}
+
+			}
+
+
+
+		</script>
+	</body>
+</html>
