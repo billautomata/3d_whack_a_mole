@@ -17,7 +17,10 @@ function Mole(){
   this.geom = new THREE.PlaneBufferGeometry(100,100)
   this.mat = new THREE.MeshPhongMaterial({color:'green', side: THREE.DoubleSide})
 
+  this.mat.shininess = 0
+
   this.mesh = new THREE.Mesh(this.geom,this.mat)
+  this.mesh.name = 'cover'
 
 
   this.tweenTarget = new THREE.Vector2(Math.random()*td-td2,Math.random*td-td2)
@@ -27,6 +30,13 @@ function Mole(){
   this.mesh2.name = 'enemy'
 
   this.mesh2.position.z = -30
+
+  this.mesh.castShadow = true
+  this.mesh.receiveShadow = true
+
+  this.mesh2.castShadow = true
+  this.mesh2.receiveShadow = true
+
 
   this.base.add(this.mesh)
   this.base.add(this.mesh2)

@@ -37,6 +37,9 @@
 			var mouse
 			var m
 
+			var evident_parent
+			var evident_light
+
 			var moles = []
 
 			var mesh
@@ -50,12 +53,20 @@
 				position_y: 0,
 				position_z: 0
 			 	}
+
+			var light_position = new THREE.Vector3(0,0,0)
+
+
 			var tween = new TWEEN.Tween(camerafov).to({ current: camerafov.target }, 20000)
 			var tweenback = new TWEEN.Tween(camerafov).to({ current: camerafov.max }, 2000)
+
+			var light_tween
+			var scale_tween
 
 			tween.chain(tweenback)
 			tweenback.chain(tween)
 
+			var evident_mesh
 
 			var windowHalfX = window.innerWidth / 2;
 			var windowHalfY = window.innerHeight / 2;
@@ -84,7 +95,7 @@
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				container.appendChild( renderer.domElement );
 
-				renderer.setClearColorHex( 0x666666, 1 );
+				renderer.setClearColorHex( 0x00000, 1 );
 
 				renderer.shadowMapEnabled = false;
 				renderer.shadowMapSoft = false;
@@ -102,31 +113,7 @@
 
 				// done setting up the scene
 
-				var mat = new THREE.MeshPhongMaterial({
-					color: new THREE.Color(1,0,1)
-				})
-
-				var floor = new THREE.PlaneBufferGeometry(1000,1000)
-
-				mesh = new THREE.Mesh(floor,mat)
-
-				// mesh.geometry.rotation.x = Math.PI*0.1
-
-				// scene.add(mesh)
-
-				mesh.rotation.x = Math.PI*0.5 * -1
-
-				var box = new THREE.Mesh(new THREE.CubeGeometry(100,100,100), new THREE.MeshPhongMaterial({color:'green'}))
-				// scene.add(box)
-
-
 				create_moles(4)
-
-				// for(var i = 0; i < 20; i++){
-				// 	q = new Mole()
-				// 	q.base.position.z = i * -20
-				// 	scene.add(q.base)
-				// }
 
 				var l = new THREE.SpotLight(0xffffff,1.0)
 				l.position.set(200,300,600)
@@ -137,24 +124,56 @@
 				l.shadowCameraFov = 90;
 				l.lookAt(0,0,0)
 				l.castShadow = true
-				scene.add(l)
+				//scene.add(l)
 
-				secondlight = new THREE.SpotLight(0xffffff,10.33)
+				secondlight = new THREE.SpotLight(0xffffff,0.1)
 				secondlight.position.set(0,1000,-500)
 				secondlight.shadowMapWidth = 2048;
 				secondlight.shadowMapHeight = 2048;
 				secondlight.shadowCameraNear = 5;
-				secondlight.shadowCameraFar = 1000;
-				secondlight.shadowCameraFov = 90;
+				secondlight.shadowCameraFar = 10000;
+				secondlight.shadowCameraFov = 75;
 				secondlight.lookAt(0,0,0)
 				secondlight.castShadow = true
+				secondlight.angle = Math.PI*0.5
 				scene.add(secondlight)
 
 				// scene.add(new THREE.AmbientLight(0x333333))
-
+				// scene.add(new THREE.PointLight(0xffffff,2,1000))
 
 				raycaster = new THREE.Raycaster()
 				mouse = new THREE.Vector2()
+
+				var evidentTexture = THREE.ImageUtils.loadTexture( "sprite_256.png" );
+				var evident_material = new THREE.MeshPhongMaterial(
+					{
+						map: evidentTexture,
+						// lightMap: evidentTexture,
+						// transparent: true,
+						shininess: 0,
+						side: THREE.DoubleSide,
+						alphaTest: 0.2,
+						opacity: 1.0,
+						// color: 0xffffff
+					}
+				);
+
+				evident_mesh = new THREE.Mesh(new THREE.PlaneBufferGeometry(200,200),evident_material)
+
+				evident_mesh.name = 'evident'
+				evident_mesh.position.z = -500
+				evident_mesh.position.y = -200
+
+				scene.add(evident_mesh)
+
+				evident_light = new THREE.PointLight(0xffffff,1.0,1000)
+				evident_light.position.z = 0
+
+				scene.add(evident_light)
+
+				light_tween = new TWEEN.Tween(evident_light).to({ intensity: 0 }, 5000)
+				scale_tween = new TWEEN.Tween(evident_mesh.scale).to({x:1,y:1}, 5000)
+
 
 				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
 				document.addEventListener( 'touchstart', onDocumentTouchStart, false );
@@ -198,9 +217,19 @@
 
 				var time = Date.now() * 0.00005;
 				//
+				// camera.position.x += ( mouseX - camera.position.x ) * 0.05;
+				// camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
+
 				camera.position.x += ( mouseX - camera.position.x ) * 0.05;
 				camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
 
+
+				secondlight.position.x = camera.position.x
+				secondlight.position.y = camera.position.y
+				secondlight.position.z = camera.position.z
+
+				secondlight.intensity = Math.abs(Math.sin(time*20)*2)
+				secondlight.lookAt(scene.position)
 
 				// console.log(camerafov.current)
 				// camera.fov = camerafov.current
@@ -216,6 +245,7 @@
 				// camera2.lookAt(scene.position)
 
 				secondlight.lookAt(0,0,0)
+				evident_mesh.lookAt(camera.position)
 
 				var all_dead = true
 				moles.forEach(function(mole){
@@ -237,7 +267,7 @@
 
 					moles = []
 
-					create_moles(Math.floor(Math.random()*5)+1)
+					create_moles(Math.floor(Math.random()*5)+3)
 
 
 				}
@@ -287,15 +317,38 @@
 
 					var intersects = raycaster.intersectObjects( scene.children, true );
 
-					if ( intersects.length === 1 ) {
+					var hit_cover = false
+					intersects.forEach(function(element){
+						if(element.object.name === 'cover'){
+							hit_cover = true
+						}
+					})
 
-						console.log(intersects)
+					var hit_enemy = false
+					intersects.forEach(function(element){
+						if(element.object.name === 'enemy'){
+							hit_enemy = true
+						}
+					})
+
+					if ( !hit_cover ) {
 
 						intersects.forEach(function(element){
-							console.log(element.object.name)
-							if(element.object.name === 'enemy'){
+
+							if(element.object.name === 'evident' && hit_enemy === false){
+
+								console.log('evident!')
+								evident_light.intensity = 20
+								evident_mesh.scale.x = 10
+								evident_mesh.scale.y = 10
+								light_tween.start()
+								scale_tween.start()
+
+							} else if(element.object.name === 'enemy'){
+
 								element.object.picked = true
 								element.object.material.color = new THREE.Color(Math.random(),Math.random(),Math.random())
+
 							}
 
 						})
