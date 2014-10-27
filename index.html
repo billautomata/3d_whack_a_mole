@@ -191,7 +191,7 @@
 				for(var i = 0; i < n; i++){
 						// add a mole
 						m = new Mole()
-						m.base.position.z = -200
+						m.base.position.z = -200 - (i*10)
 						scene.add(m.base)
 
 						moles.push(m)
@@ -217,11 +217,11 @@
 
 				var time = Date.now() * 0.00005;
 				//
-				// camera.position.x += ( mouseX - camera.position.x ) * 0.05;
-				// camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
-
 				camera.position.x += ( mouseX - camera.position.x ) * 0.05;
 				camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
+
+				// camera.position.x += ( mouseX - camera.position.x ) * 0.05;
+				// camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
 
 
 				secondlight.position.x = camera.position.x
@@ -307,8 +307,10 @@
 
 			function onDocumentMouseDown( event ) {
 
-			    event.preventDefault();
+				console.log(event)
 
+			    event.preventDefault();
+					console.log(mouse)
 					var vector = new THREE.Vector3( mouse.x, mouse.y, 1 ).unproject( camera );
 					// var vector = new THREE.Vector3( mouseX, mouseY, 1 ).unproject( camera );
 
@@ -384,6 +386,9 @@
 				mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
 				mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 
+
+
+
 			}
 
 			function onDocumentTouchStart( event ) {
@@ -392,21 +397,92 @@
 
 					event.preventDefault();
 
-					mouseX = event.touches[ 0 ].pageX - windowHalfX;
-					mouseY = event.touches[ 0 ].pageY - windowHalfY;
+					// mouseX = event.touches[ 0 ].pageX - windowHalfX;
+					// mouseY = event.touches[ 0 ].pageY - windowHalfY;
+
+					event.preventDefault();
+
+					console.log(event.touches[0])
+
+					mouse.x = ( event.touches[0].pageX / window.innerWidth ) * 2 - 1;
+					mouse.y = - ( event.touches[0].pageY / window.innerHeight ) * 2 + 1;
+
+					console.log(mouse)
+
+					var vector = new THREE.Vector3( mouse.x, mouse.y, 1 ).unproject( camera );
+					// var vector = new THREE.Vector3( mouseX, mouseY, 1 ).unproject( camera );
+
+					raycaster.set( camera.position, vector.sub( camera.position ).normalize() );
+
+					var intersects = raycaster.intersectObjects( scene.children, true );
+					console.log(intersects.length)
+
+					var hit_cover = false
+					intersects.forEach(function(element){
+						if(element.object.name === 'cover'){
+							hit_cover = true
+						}
+					})
+
+					var hit_enemy = false
+					intersects.forEach(function(element){
+						if(element.object.name === 'enemy'){
+							hit_enemy = true
+						}
+					})
+
+					if ( !hit_cover ) {
+
+						intersects.forEach(function(element){
+
+							if(element.object.name === 'evident' && hit_enemy === false){
+
+								console.log('evident!')
+								evident_light.intensity = 20
+								evident_mesh.scale.x = 10
+								evident_mesh.scale.y = 10
+								light_tween.start()
+								scale_tween.start()
+
+							} else if(element.object.name === 'enemy'){
+
+								element.object.picked = true
+								element.object.material.color = new THREE.Color(Math.random(),Math.random(),Math.random())
+
+							}
+
+						})
+
+						// if ( INTERSECTED != intersects[ 0 ].object ) {
+						//
+						// 	if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
+						//
+						// 	INTERSECTED = intersects[ 0 ].object;
+						// 	INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
+						// 	INTERSECTED.material.emissive.setHex( 0xff0000 );
+						//
+						// }
+
+					} else {
+
+						console.log('none')
+
+						//
+						// if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
+						//
+						// INTERSECTED = null;
+
+					}
+
 
 				}
 
 			}
 
 			function onDocumentTouchMove( event ) {
-
+				//
 				if ( event.touches.length === 1 ) {
-
-					event.preventDefault();
-
-					mouseX = event.touches[ 0 ].pageX - windowHalfX;
-					mouseY = event.touches[ 0 ].pageY - windowHalfY;
+				//
 
 				}
 
@@ -415,5 +491,7 @@
 
 
 		</script>
+
 	</body>
+	
 </html>
